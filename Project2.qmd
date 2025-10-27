@@ -1,0 +1,123 @@
+---
+title: "Project 2"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Purpose and Preliminaries
+
+The purpose of this Quarto document is to prepare and explore the data in a static manner that will be used to construct our Shiny app for project 2. We are using the Mobile Device Usage data set. We start by importing the data, as well as packages we will use throughout this Quarto document.
+
+```{r}
+library(tidyverse)
+
+user_data <- read_csv('project2-app/user_behavior_dataset.csv')
+```
+
+
+## Preparing the Data
+
+Our first step is to ensure each variable in the tibble is of the appropriate data type. We view the tibble.
+
+```{r}
+user_data
+```
+
+It appears that Device Model, Operating System, Gender, and User Behavior Class are our categorical variables, whereas the remaining variables are numeric/quantitative. We change the categorical variables so they are stored as factors in our tibble.  
+
+```{r}
+user_data <- user_data |>
+  mutate(`Device Model` = as.factor(`Device Model`),
+         `Operating System` = as.factor(`Operating System`),
+         Gender = as.factor(Gender),
+         `User Behavior Class` = as.factor(`User Behavior Class`))
+```
+
+Now that are data are stored in the desired form, we perform our final step of modifying the variable names (when applicable) so that they follow R naming conventions.
+
+```{r}
+user_data <- user_data |>
+  rename('user_id' = `User ID`,
+         'device_model' = `Device Model`,
+         'operating_system' = `Operating System`,
+         'app_use_time' = `App Usage Time (min/day)`,
+         'screen_on_time' = `Screen On Time (hours/day)`,
+         'battery_drain' = `Battery Drain (mAh/day)`,
+         'app_number' = `Number of Apps Installed`,
+         'data_usage' = `Data Usage (MB/day)`,
+         'behavior_class' = `User Behavior Class`)
+```
+
+
+## Numerical Summaries: Categorical Variables
+
+We perform some numerical summaries for categorical variables. We use the table function from base R for this purpose. We first produce one-way contingency tables for each categorical variable. 
+
+```{r}
+table(user_data$device_model)
+table(user_data$operating_system)
+table(user_data$Gender)
+table(user_data$behavior_class)
+```
+
+Next we will create two-way contingency tables. We choose a couple of representative pairs of categorical variables for this purpose.
+
+```{r}
+user_data |>
+  select(device_model, Gender) |>
+  table()
+
+user_data |>
+  select(behavior_class, operating_system) |>
+  table()
+
+```
+
+## Numerical Summaries: Quantitative Variables
+
+Next we perform numerical summaries for quantitative variables at different levels of categorical variables.
+
+Our first example will be summaries of app use time by gender.
+
+```{r}
+user_data |>
+  group_by(Gender) |>
+  summarize('mean' = mean(app_use_time), 
+            'median' = median(app_use_time),
+            'SD' = sd(app_use_time),
+            'IQR' = IQR(app_use_time),
+            'minimum' = min(app_use_time),
+            'maximum' = max(app_use_time))
+```
+
+Our next example will be summaries of app use time by gender and operating system.
+
+```{r}
+user_data |>
+  group_by(Gender, operating_system) |>
+  summarize('mean' = mean(app_use_time), 
+            'median' = median(app_use_time),
+            'SD' = sd(app_use_time),
+            'IQR' = IQR(app_use_time),
+            'minimum' = min(app_use_time),
+            'maximum' = max(app_use_time))
+```
+
+Finally, we will look at number of apps installed by behavior class.
+
+```{r}
+user_data |>
+  group_by(behavior_class) |>
+  summarize('mean' = mean(app_number), 
+            'median' = median(app_number),
+            'SD' = sd(app_number),
+            'IQR' = IQR(app_number),
+            'minimum' = min(app_number),
+            'maximum' = max(app_number))
+```
+
+## Exploratory Data Analysis Plotting
+
+In this section we create several plots to explore our data. 
