@@ -120,4 +120,56 @@ user_data |>
 
 ## Exploratory Data Analysis Plotting
 
-In this section we create several plots to explore our data. 
+In this section we create several plots to explore our data.
+
+Our first plot will be a scatter plot of app usage time versus number of apps, grouped by gender.
+
+```{r}
+user_data |>
+  ggplot(aes(app_number, app_use_time)) + geom_point(aes(color = Gender)) + labs(x = 'Number of Apps Installed', y = 'App Usage Time (min/day)', title = 'App Usage Time by Number of Apps Installed and Gender')
+```
+
+Our next plot will be a bar plot of behavior class by operating system and gender. 
+
+```{r}
+user_data |>
+  ggplot(aes(behavior_class)) + geom_bar(aes(fill = operating_system), position = 'dodge') + facet_wrap(~ Gender) + labs(x = 'User Behavior Class', title = 'User Behavior Class Counts by Operating System and Gender', fill = 'Operating System')
+```
+
+Next we will create a density plot of app use time by gender and device model. 
+
+```{r}
+user_data |>
+  ggplot(aes(app_use_time)) + geom_density(aes(fill = Gender), alpha = 0.5) + facet_wrap(~device_model) + labs(x = 'App Usage Time (min/day)', y = 'Density', title = 'Distribution of App Usage Time by Gender and Device Model') 
+```
+
+Next we create a box plot of app number by user behavior class and operating system. 
+
+```{r}
+user_data |>
+  ggplot(aes(x = behavior_class, y = app_number)) + geom_boxplot() + facet_wrap(~operating_system) + labs(x = 'User Behavior Class', y = 'Number of Apps Installed', title = 'Number of Apps Installed by User Behavior Class') + theme_light()
+```
+
+Next we create box plots of app use time by gender and operating system. 
+
+```{r}
+user_data |>
+  ggplot(aes(x = Gender, y = app_use_time)) + geom_boxplot() + facet_wrap(~operating_system) + labs(x = 'Gender', y = 'App Usage Time (min/day)', title = 'App Usage Time by Gender and Operating System') + theme_light()
+```
+
+Finally we create a plot type that was not covered in class: a correlation matrix. We use the `ggcorrplot` to create the correlation matrix. We round all correlation values to one decimal place. 
+
+```{r}
+library(ggcorrplot)
+
+corr_matrix <- user_data[unlist(lapply(user_data, is.numeric))] |>
+  select(!user_id) |>
+  cor() |>
+  round(1)
+
+ggcorrplot(corr_matrix, lab = T, title = 'Correlation Matrix for Mobile Device Usage Data', colors = c('yellow', 'blue', 'green'))
+  
+```
+
+We see from the plot that all of the quantitative variables in the Mobile Device Usage data set are highly positively correlated with one another, except for age, which has nearly no correlation with any of the other variables. 
+
