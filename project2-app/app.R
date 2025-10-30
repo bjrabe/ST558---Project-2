@@ -52,6 +52,7 @@ ui <- fluidPage(
       
       ### Add select boxes to choose 2 quantitative variables ---
       ### Include dynamic sliders for sub-setting chosen variables ----
+      ### The slider functions will be updated dynamically using                     updateSliderInput() function in the server ----
       selectInput(
         inputId = 'num1',
         label = 'Choose a first numeric variable',
@@ -93,26 +94,123 @@ ui <- fluidPage(
         value = c(0, 12)
       ),
       
+      ### create action button to update the subsetted data ----
       actionButton(
         inputId = 'subset',
         label = 'Click here to update the requested data subset'
       )
     ),
     
+    ### create a main panel ----
     mainPanel(
+      
+      ### Create 3 tabs in the main panel ----
       tabsetPanel(
+        
+        ### Create the 'About' panel ----
         tabPanel(
           title = 'About'
         ),
+        
+        ### Create the data download panel ----
         tabPanel(
           title = 'Data Download',
+          br(),
           'Click the button at the bottom of the sidebar panel to create a subsetted data table. Make sure to choose the categorical and numeric variables you wish to subset the data by.',
           br(),
           br(),
-          DT::dataTableOutput('subsetted_data')
+          DT::dataTableOutput('subsetted_data'),
+          
+          ### Add download button
+          conditionalPanel(
+            condition = "input.subset >= 1",
+            downloadButton(
+              outputId = 'data_download',
+              label = 'Click here to download your selected data table'
+            )
+          )
         ),
+      
+        
+        ### Create the Data Exploration panel ----
         tabPanel(
-          title = 'Data Exploration'
+          title = 'Data Exploration',
+          br(),
+          
+          'Here we explore the Mobile Usage Data with numeric and graphical summaries. You will have the opportunity to choose the variables you wish to explore in the tabs below.',
+          
+          ### Create different tabs for numerical summaries and plotting
+          tabsetPanel(
+            
+            
+            ### create tab for numerical summaries ----
+            tabPanel(
+              title = 'Numerical Summaries',
+              br(),
+              fluidRow(
+                column(width = 4,
+                  selectInput(
+                    inputId = 'num_var_choice',
+                    label = 'Select a quantitative variable you wish to explore.',
+                    choices = c('App Usage Time' = 'app_use_time',
+                                'Screen On Time' = 'screen_on_time',
+                                'Battery Drain' = 'battery_drain',
+                                'Number of Apps Installed' = 'app_number',
+                                'Data Usage' = 'data_usage',
+                                'Age' = 'Age')
+                  )
+                ),
+                
+                column(width = 4,
+                  selectInput(
+                    inputId = 'cat_var_choices',
+                    label = 'Choose two categorical variables you wish to explore. If you select more than two, only the first two you choose will be used. You must have at least two selected to proceed.',
+                    choices = c('Device Model' = 'device_model',
+                                'Operating System' = 'operating_system',
+                                'Gender' = 'Gender',
+                                'User Behavior Class' = 'behavior_class'),
+                    multiple = T
+                  )
+                ),
+                column(width = 4,
+                  selectInput(
+                    inputId = 'num_summary',
+                    label = 'Choose what type of summary you wish to see.',
+                    choices = c('One way contingency table (using first selected categorical variable)' = 'one-way',
+                                'Two way contingency table' = 'two-way',
+                                'Numerical summary - no grouping' = 'num_none',
+                                'Numerical summary - one grouping variable (using the first selected categorical variable)' = 'num_one',
+                                'Numerical summary - two grouping variables' = 'num_two')
+                  )
+                  
+                )
+              ),
+              
+              
+              conditionalPanel(
+                condition = 'input.cat_var_choices.length >= 2',
+                actionButton(
+                  inputId = 'num_sum_update',
+                  label = 'Click here to update summary.'
+                )
+              ),
+              
+              br(),
+              'When the above selections are modified, the displayed table will not update until the action button is pressed. If you do not see the action button, it means you do not have at least two categorical variables selected.',
+              br(),
+              br(),
+              
+              tableOutput('numeric_summary')
+            
+              ),
+              
+            
+            ### create tab for plotting ----
+            tabPanel(
+              title = 'Plotting'
+            )
+          )
+          
         )
       )
       
@@ -151,8 +249,8 @@ server <- function(input, output, session){
              operating_system %in% input$os,
              Gender %in% input$gender,
              behavior_class %in% input$class, 
-             (input$num1_range[1] <= user_data[input$num1]) & (user_data[input$num1] <= input$num1_range[2]),
-             (input$num2_range[1] <= user_data[input$num2]) & (user_data[input$num2] <= input$num2_range[2]))
+             (input$num1_range[1] <= user_data[[input$num1]]) & (user_data[[input$num1]] <= input$num1_range[2]),
+             (input$num2_range[1] <= user_data[[input$num2]]) & (user_data[[input$num2]] <= input$num2_range[2]))
   })
   
   ### create output object which is a subsetted data table ----
@@ -178,8 +276,63 @@ server <- function(input, output, session){
       value = c(0, max(user_data[input$num2]))
     )
   })
-
+  
+  ### create server function for downloading data table ----
+  output$data_download <- 
+    downloadHandler(
+      filename = 'mobile_use_data_subset.csv',
+      content = function(file){
+        write.csv(user_data_subset(), file)
+      }
+    )
     
+  ### create output for numeric summary chosen by user ----
+  numeric_table <- eventReactive(input$num_sum_update, {
+    if (input$num_summary == 'one-way'){
+      user_data |>
+        select(input$cat_var_choices[1]) |>
+        table()
+    } else if (input$num_summary == 'two-way'){
+      user_data |>
+        select(input$cat_var_choices[1], input$cat_var_choices[2]) |>
+        table()
+    } else if (input$num_summary == 'num_none'){
+      user_data |>
+        summarize('mean' = mean(user_data[[input$num_var_choice]]), 
+                  'median' = median(user_data[[input$num_var_choice]]),
+                  'SD' = sd(user_data[[input$num_var_choice]]),
+                  'IQR' = IQR(user_data[[input$num_var_choice]]),
+                  'minimum' = min(user_data[[input$num_var_choice]]),
+                  'maximum' = max(user_data[[input$num_var_choice]]))
+    } else if (input$num_summary == 'num_one'){
+      user_data |>
+        group_by(get(input$cat_var_choices[1])) |>
+        summarize('mean' = mean(get(input$num_var_choice)), 
+                  'median' = median(get(input$num_var_choice)),
+                  'SD' = sd(get(input$num_var_choice)),
+                  'IQR' = IQR(get(input$num_var_choice)),
+                  'minimum' = min(get(input$num_var_choice)),
+                  'maximum' = max(get(input$num_var_choice))) |>
+        rename('First Grouping Variable' = 'get(input$cat_var_choices[1])')
+    } else {
+      user_data |>
+        group_by(get(input$cat_var_choices[1]), get(input$cat_var_choices[2])) |>
+        summarize('mean' = mean(get(input$num_var_choice)), 
+                  'median' = median(get(input$num_var_choice)),
+                  'SD' = sd(get(input$num_var_choice)),
+                  'IQR' = IQR(get(input$num_var_choice)),
+                  'minimum' = min(get(input$num_var_choice)),
+                  'maximum' = max(get(input$num_var_choice)),
+                  .groups = 'keep') |>
+        rename('First Grouping Variable' = 'get(input$cat_var_choices[1])',
+               'Second Grouping Variable' = 'get(input$cat_var_choices[2])')
+      
+    }
+  })
+  
+  output$numeric_summary <- renderTable({
+    numeric_table()
+  })
   
 }
 
