@@ -13,7 +13,7 @@ ui <- fluidPage(
     
     ### Add objects to the sidebar panel ----
     sidebarPanel(
-      'Make selections below to subset the Mobile Usage Data set. Each time you make a change to your selections, you must hit the action button at the bottom of this sidebar to update the changes.',
+      'Make selections below to subset the Mobile Device Usage Data set. Each time you make a change to your selections, you must hit the action button at the bottom of this sidebar to update the changes.',
       br(),
       br(),
       ### Add select boxes to choose subsets of categorical variables ----
@@ -113,7 +113,7 @@ ui <- fluidPage(
         tabPanel(
           title = 'About',
           br(),
-          'Greetings! You are using an app that will allow you to explore the Mobile Device Usage and User Behavior Dataset. More information about this data set, as well as a link to download the data set, can be found at : https://www.kaggle.com/datasets/valakhorasani/mobile-device-usage-and-user-behavior-dataset. Below we include some more information about each of the portions of this app, including the different tabs. Before we get into this, take a look at the following key which associates each variable with a corresponding name in the data set. This key will help you decipher the variable names as you encounter them in tables and plots in the other tabs. You will notice that the variable names in the data set are relatively intuitive.',
+          'Greetings! You are using an app that will allow you to explore the Mobile Device Usage and User Behavior Dataset. This dataset provides information on mobile device usage patterns and user behavior classification measured by 10 different variables for 700 individuals. More information about this data set, as well as a link to download the data set, can be found at : https://www.kaggle.com/datasets/valakhorasani/mobile-device-usage-and-user-behavior-dataset. Below we include some more information about each of the portions of this app, including the different tabs. Before we get into this, take a look at the following key which associates each variable with a corresponding name in the data set. This key will help you decipher the variable names as you encounter them in tables and plots in the other tabs. You will notice that the variable names in the data set are relatively intuitive.',
           br(),
           br(),
           'User ID: user_id',
@@ -130,31 +130,34 @@ ui <- fluidPage(
           br(),
           'Number of Apps Installed: app_number',
           br(),
-          'Data Usage: data_usage',
+          'Data Usage (megabytes/day): data_usage',
           br(),
-          'Age of user: Age',
+          'Age of user in years: Age',
           br(),
           'Gender of user: Gender',
           br(),
-          'User Behavior Class (1 to 5 scale): behavior_class',
+          'User Behavior Class (1 to 5 scale with 1 being light usage and 5 being extreme usage): behavior_class',
         
           br(),
           br(),
           h3('Sidebar Panel'),
-          'The sidebar panel is where you will generate your desired subset of the Mobile App Usage Data set. You will select variables to subset by and then click the action button at the bottom of the sidebar to update your selection. Keep in mind that it is possible to generate an empty subset of the data which will affect your ability to meaninfully explore the rest of the app features.',
+          'The sidebar panel is where you will generate your desired subset of the Mobile Device Usage Data set. You will select variables to subset by and then click the action button at the bottom of the sidebar to update your selection. Keep in mind that it is possible to generate an empty subset of the data which will affect your ability to meaninfully explore the rest of the app features.',
           br(),
           h3('Main Panel'),
           h4('About'),
           'The "About" tab in the main panel is the tab you are currently in. It simply gives an overview of the features of the app',
           br(),
           h4('Data Download'),
-          'This tab allows you to view your up-to-date selection for the subset of the Mobile App Usage Data set. If it is an empty table, it means you have chosen an empty subset of the data. To correct this, head back over the sidebar and make some changes. You can click the action button at the bottom of the tab if you wish to download the data.',
+          'This tab allows you to view your up-to-date selection for the subset of the Mobile Device Usage Data set. If it is an empty table, it means you have chosen an empty subset of the data. To correct this, head back over the sidebar and make some changes. You can click the action button at the bottom of the Data Download tab if you wish to download the data.',
           br(),
           h4('Data Exploration'),
           h5('Numerical Summaries'),
           'In this tab, you can choose categorical and numeric variables you wish to learn more about and generate contingency tables or numeric summaries, optionally grouped by categorical variables. Note these summaries will be generated from the subsetted data you chose in the sidebar on the left, so the outputs will be affected by your subsetting choices.',
           h5('Plotting'),
           'In this tab you can create a variety of different plots from the subsetted data you chose in the sidebar on the left. There is flexibility for you to choose which variables you would like to explore. Because they are created from subsetted data, the plot outputs will be affected by your subsetting choices in the sidebar to the left.',
+          br(),
+          br(),
+          imageOutput('image'),
           br(),
           br()
          
@@ -291,6 +294,9 @@ ui <- fluidPage(
                   width = 4
                 )
               ),
+              'When either the above selections or the subsetted data chosen to the left are modified, the displayed plot will not update until the action button below is pressed.',
+              br(),
+              br(),
               actionButton(
                 inputId = 'plot_create',
                 label = 'Click here to create or update your plot.'
@@ -329,6 +335,13 @@ user_data <- user_data |>
 
 ### Create a server function ----
 server <- function(input, output, session){
+  
+  ### create output object for image in "About" tab ---
+  output$image <- renderImage(
+    list('src' = 'phone.jpg',
+         width = 450,
+         height = 300),
+    deleteFile = F)
   
   ### create a reactive object which is the desired subset of the data, chosen by the user; store it in a data frame; use eventReactive() to ensure this only updates when the action button is selected ----
   user_data_subset <- eventReactive(input$subset, {
@@ -571,10 +584,8 @@ server <- function(input, output, session){
     }
   })
   
-  ### create plotting object from user selections. we make the object with eventReactive to ensure the plot is updated only when the action button is selected ----
-  
-  plotting_object <- eventReactive(input$plot_create, {
-    
+  ### create a reactive plotting object from user selections.  ----
+  plotting_object <- reactive({
     if (length(rownames(user_data_subset())) == 0){
       ggplot(user_data_subset())
     } else if (input$plot_type == 'Bar Plot'){
@@ -598,13 +609,17 @@ server <- function(input, output, session){
       ggcorrplot(corr_matrix, lab = T, title = 'Correlation Matrix for Mobile Device Usage Data', colors = c('yellow', 'blue', 'green'))
       
     }
-    
   })
+
+
   
-  ### save plotting object in output object using renderplot ----
-  output$user_plot <- renderPlot({
-    plotting_object()
-  })
+  ### save plotting object in output object using renderplot. Use bindEvent so this only occurs when the action button is pressed ----
+  output$user_plot <- bindEvent(
+    renderPlot({
+      plotting_object()
+    }),
+    input$plot_create
+  )
   
   ### Create an error if the user tries to make a plot before selecting a subset of data ---
   observeEvent(input$plot_create, {
