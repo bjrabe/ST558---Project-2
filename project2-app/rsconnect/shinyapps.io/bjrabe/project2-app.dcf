@@ -1,0 +1,10 @@
+name: project2-app
+title:
+username: bjrabe
+account: bjrabe
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15940287
+bundleId: 11120376
+url: https://bjrabe.shinyapps.io/project2-app/
+version: 1
