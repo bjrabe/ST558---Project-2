@@ -2,6 +2,8 @@
 title: "Project 2"
 format: html
 editor: visual
+author: 'Brian Rabe'
+date: '11/2/2025'
 editor_options: 
   chunk_output_type: console
 ---

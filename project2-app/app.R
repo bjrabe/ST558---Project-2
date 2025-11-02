@@ -1,9 +1,16 @@
+####Header
+# Author: Brian Rabe
+# Date: 11/2/2025
+# Purpose of Program: Create an R shiny app to explore the Mobile Device Usage and User Behavior Dataset
+
+
 ### Load necessary packages ----
 library(shiny)
 library(shinyalert)
 library(DT)
 library(tidyverse)
 library(ggcorrplot)
+library(shinycssloaders)
 
 ### Create UI object ----
 ui <- fluidPage(
@@ -157,6 +164,8 @@ ui <- fluidPage(
           'In this tab you can create a variety of different plots from the subsetted data you chose in the sidebar on the left. There is flexibility for you to choose which variables you would like to explore. Because they are created from subsetted data, the plot outputs will be affected by your subsetting choices in the sidebar to the left.',
           br(),
           br(),
+          
+          ### add an image output to place pertinent image in UI, this references an output object created by renderImage function in the server ----
           imageOutput('image'),
           br(),
           br()
@@ -237,7 +246,7 @@ ui <- fluidPage(
                 )
               ),
               
-              
+              ### create an action button to update the summary tables. use conditional panel so this only appears if at least two categorical variables are selected ----
               conditionalPanel(
                 condition = 'input.cat_var_choices.length >= 2',
                 actionButton(
@@ -297,11 +306,16 @@ ui <- fluidPage(
               'When either the above selections or the subsetted data chosen to the left are modified, the displayed plot will not update until the action button below is pressed.',
               br(),
               br(),
+              
+              ### create an action button that creates/updates the plot when the button is clicked ---
               actionButton(
                 inputId = 'plot_create',
                 label = 'Click here to create or update your plot.'
               ),
-              plotOutput('user_plot')
+              
+              ### display the plot with a loading spinner that shows while waiting for plot to render ----
+              withSpinner(plotOutput('user_plot'))
+              
             )
           )
           
@@ -388,6 +402,7 @@ server <- function(input, output, session){
     )
     
   ### create output for numeric summary chosen by user ----
+  # user eventReactive so this only updates when the action button is clicked ----
   numeric_table <- eventReactive(input$num_sum_update, {
     if (input$num_summary == 'one-way'){
       user_data_subset() |>
@@ -431,6 +446,7 @@ server <- function(input, output, session){
     }
   })
   
+  # save subsetted table into output object to be used for rendering in UI ---
   output$numeric_summary <- renderTable({
     numeric_table()
   })
@@ -628,7 +644,7 @@ server <- function(input, output, session){
     }
   })
   
-  ### create an error for if the user tries to make a plot with an empty subset of data ----
+  ### create a warning if the user tries to make a plot with an empty subset of data ----
   observeEvent(input$plot_create, {
     if (length(rownames(user_data_subset())) == 0){
       shinyalert(title = 'Caution!', 'You have created an empty subset of the data. Your plot will be empty if you do not modify your subset to include some data. Use the sidebar to the left to do so', type = 'warning')
