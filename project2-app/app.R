@@ -402,7 +402,7 @@ server <- function(input, output, session){
     )
     
   ### create output for numeric summary chosen by user ----
-  # user eventReactive so this only updates when the action button is clicked ----
+  # use eventReactive so this only updates when the action button is clicked ----
   numeric_table <- eventReactive(input$num_sum_update, {
     if (input$num_summary == 'one-way'){
       user_data_subset() |>
@@ -414,12 +414,12 @@ server <- function(input, output, session){
         table()
     } else if (input$num_summary == 'num_none'){
       user_data_subset() |>
-        summarize('mean' = mean(user_data[[input$num_var_choice]]), 
-                  'median' = median(user_data[[input$num_var_choice]]),
-                  'SD' = sd(user_data[[input$num_var_choice]]),
-                  'IQR' = IQR(user_data[[input$num_var_choice]]),
-                  'minimum' = min(user_data[[input$num_var_choice]]),
-                  'maximum' = max(user_data[[input$num_var_choice]]))
+        summarize('mean' = mean(get(input$num_var_choice)), 
+                  'median' = median(get(input$num_var_choice)),
+                  'SD' = sd(get(input$num_var_choice)),
+                  'IQR' = IQR(get(input$num_var_choice)),
+                  'minimum' = min(get(input$num_var_choice)),
+                  'maximum' = max(get(input$num_var_choice)))
     } else if (input$num_summary == 'num_one'){
       user_data_subset() |>
         group_by(get(input$cat_var_choices[1])) |>
